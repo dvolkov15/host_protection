@@ -93,3 +93,101 @@ root@ubuntu:/home/user#
 
 
 ## Заданаие 2
+
+Установите поддержку LUKS.
+Создайте небольшой раздел, например, 100 Мб.
+Зашифруйте созданный раздел с помощью LUKS.
+В качестве ответа пришлите снимки экрана с поэтапным выполнением задания.
+
+Устанавливаем gparted cryptsetup (LUKS)
+```
+apt install gparted cryptsetup
+```
+
+Проверка
+```
+root@ubuntu:/home/user# cryptsetup --version
+cryptsetup 2.4.3
+```
+
+
+```
+root@ubuntu:/home/user# fdisk -l
+Disk /dev/sdb: 50 GiB, 53687091200 bytes, 104857600 sectors
+Disk model: Virtual disk
+Units: sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+```
+
+
+Подготавливаем раздел (тип luks2)
+
+```
+root@ubuntu:/home/user# cryptsetup -y -v --type luks2 luksFormat /dev/sdb
+
+WARNING!
+========
+This will overwrite data on /dev/sdb irrevocably.
+
+Are you sure? (Type 'yes' in capital letters): YES
+Enter passphrase for /dev/sdb:
+Verify passphrase:
+Key slot 0 created.
+Command successful.
+root@ubuntu:/home/user#
+```
+
+Открываем устройство /dev/sdb и задаем ему имя cryptodisk
+
+```
+root@ubuntu:/home/user# sudo cryptsetup luksOpen /dev/sdb cryptodisk
+Enter passphrase for /dev/sdb:
+
+```
+
+Проверяем
+
+```
+root@ubuntu:/home/user# ls -al /dev/mapper/cryptodisk
+lrwxrwxrwx 1 root root 7 Sep  3 20:57 /dev/mapper/cryptodisk -> ../dm-1
+```
+
+Форматируем раздел и размечаем в ext4
+```
+root@ubuntu:/home/user# sudo dd if=/dev/zero of=/dev/mapper/cryptodisk
+```
+
+```
+root@ubuntu:/home/user# mkfs.ext4 /dev/mapper/cryptodisk
+mke2fs 1.46.5 (30-Dec-2021)
+Creating filesystem with 13103104 4k blocks and 3276800 inodes
+Filesystem UUID: 24d5bc17-5dff-4862-ad72-347a4a571c6f
+Superblock backups stored on blocks:
+        32768, 98304, 163840, 229376, 294912, 819200, 884736, 1605632, 2654208,
+        4096000, 7962624, 11239424
+
+Allocating group tables: done
+Writing inode tables: done
+Creating journal (65536 blocks): done
+Writing superblocks and filesystem accounting information: done
+
+```
+
+Создаем директорию .secret а в ней тестовый файл
+```
+root@ubuntu:/home/user# mkdir .secret
+root@ubuntu:/home/user# cd .secret/
+root@ubuntu:/home/user/.secret# touch file.txt
+
+```
+
+итог
+
+```
+root@ubuntu:/home/user# sudo cryptsetup luksClose cryptodisk
+root@ubuntu:/home/user# mount /dev/sdb /mnt/
+mount: /mnt: unknown filesystem type 'crypto_LUKS'.
+root@ubuntu:/home/user#
+
+```
